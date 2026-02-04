@@ -1,0 +1,46 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.html
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Dependency directories (if using vendor)
+vendor/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Build output
+bin/
+dist/
+
+# Environment files (never commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Debug files
+debug
+__debug_bin*
+
+# Air live reload temp directory (if using air)
+tmp/
