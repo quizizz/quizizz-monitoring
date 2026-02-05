@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 
-	"go.quizizz.org/monitoring/qlogger"
-	"go.quizizz.org/monitoring/qlogger/sampler"
+	"github.com/quizizz/quizizz-monitoring/qlogger"
+	"github.com/quizizz/quizizz-monitoring/qlogger/sampler"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

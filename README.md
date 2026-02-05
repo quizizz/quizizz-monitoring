@@ -14,8 +14,10 @@ A production-ready, high-performance logging package for Go built on top of [Ube
 
 ## Installation
 
+To install qlogger:
+
 ```bash
-go get github.com/wayground/wlogger
+go get github.com/quizizz/quizizz-monitoring/qlogger
 ```
 
 ## Quick Start
