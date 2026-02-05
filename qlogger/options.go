@@ -1,7 +1,7 @@
 package qlogger
 
 import (
-	"go.quizizz.org/monitoring/qlogger/sampler"
+	"github.com/quizizz/quizizz-monitoring/qlogger/sampler"
 	"go.uber.org/zap/zapcore"
 )
 

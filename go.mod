@@ -1,4 +1,4 @@
-module go.quizizz.org/monitoring
+module github.com/quizizz/quizizz-monitoring
 
 go 1.23.0
 

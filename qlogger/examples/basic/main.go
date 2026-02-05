@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"go.quizizz.org/monitoring/qlogger"
+	"github.com/quizizz/quizizz-monitoring/qlogger"
 	"go.uber.org/zap"
 )
 
