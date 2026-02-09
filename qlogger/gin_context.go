@@ -8,14 +8,13 @@ import (
 // GetTraceIDFromGinCtx extracts the trace ID from gin.Context.
 // It checks in the following order:
 // 1. OpenTelemetry span context
-// 2. AWS X-Ray trace ID from context value
+// 2. trace_id from context value
 // 3. X-Amzn-Trace-Id header (AWS X-Ray format)
 // 4. X-Amzn-TraceId header (alternative format)
 // 5. X-Amz-Firehose-TraceId header (AWS Firehose)
-// 6. Custom trace ID from context value
 // 7. X-Trace-ID header
 // 8. X-Request-ID header
-// 9. x-trace-id context value (backward compatibility)
+// 9. trace_id context value (backward compatibility)
 //
 // If the trace ID contains "Root=1-x-y" format, it returns "xy" (x+y concatenated).
 // Otherwise, it returns the trace ID as-is.
@@ -33,6 +32,13 @@ func GetTraceIDFromGinCtx(c *gin.Context) string {
 		spanContext := span.SpanContext()
 		if spanContext.IsValid() {
 			return spanContext.TraceID().String()
+		}
+	}
+
+	// Try custom trace ID from context (typed key)
+	if traceID == "" {
+		if val, ok := ctx.Value(TraceIDKey).(string); ok && val != "" {
+			traceID = val
 		}
 	}
 
@@ -62,12 +68,6 @@ func GetTraceIDFromGinCtx(c *gin.Context) string {
 		}
 	}
 
-	// Try custom trace ID from context (typed key)
-	if traceID == "" {
-		if val, ok := ctx.Value(TraceIDKey).(string); ok && val != "" {
-			traceID = val
-		}
-	}
 
 	// Try X-Trace-ID header
 	if traceID == "" {
@@ -99,9 +99,7 @@ func GetTraceIDFromGinCtx(c *gin.Context) string {
 // addGinDefaultFields adds standard fields like traceId to log entries.
 func addGinDefaultFields(c *gin.Context, fields ...Field) []Field {
 	traceID := GetTraceIDFromGinCtx(c)
-	if traceID != "" {
 		fields = append(fields, String("trace_id", traceID))
-	}
 	return fields
 }
 

@@ -12,7 +12,7 @@ type ContextKey string
 
 const (
 	// TraceIDKey is the context key for trace ID.
-	TraceIDKey ContextKey = "x-trace-id"
+	TraceIDKey ContextKey = "trace_id"
 
 	// AWSTraceIDKey is the context key for AWS X-Ray trace ID.
 	AWSTraceIDKey ContextKey = "X-Amzn-Trace-Id"
@@ -59,16 +59,16 @@ func GetTraceIDFromCtx(ctx context.Context) string {
 		}
 	}
 
-	// Try AWS X-Ray trace ID from context (typed key)
+	// Try AWS X-Ray (trace_id) from context (typed key)
 	if traceID == "" {
-		if val, ok := ctx.Value(AWSTraceIDKey).(string); ok && val != "" {
+		if val, ok := ctx.Value(TraceIDKey).(string); ok && val != "" {
 			traceID = val
 		}
 	}
 
-	// Try AWS X-Ray trace ID from context (string key for backward compatibility)
+	// Try AWS X-Ray trace ID from context ( for backward compatibility)
 	if traceID == "" {
-		if val, ok := ctx.Value("X-Amzn-Trace-Id").(string); ok && val != "" {
+		if val, ok := ctx.Value(AWSTraceIDKey).(string); ok && val != "" {
 			traceID = val
 		}
 	}

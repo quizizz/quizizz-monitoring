@@ -2,11 +2,10 @@ package qlogger
 
 import (
 	"context"
-	"os"
 
-	"github.com/quizizz/quizizz-monitoring/qlogger/sampler"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"github.com/quizizz/quizizz-monitoring/qlogger/sampler"
 )
 
 // Field is an alias for zap.Field for convenience.
@@ -14,26 +13,26 @@ type Field = zap.Field
 
 // Type aliases for zap field constructors for convenience.
 var (
-	String  = zap.String
-	Int     = zap.Int
-	Int64   = zap.Int64
-	Float64 = zap.Float64
-	Bool    = zap.Bool
-	Any     = zap.Any
-	Err     = zap.Error
-	Duration  = zap.Duration
-    Time      = zap.Time
-    Stringer  = zap.Stringer
-    Int32     = zap.Int32
-    Uint      = zap.Uint
-    Uint64    = zap.Uint64
-    Binary    = zap.Binary
-    ByteString = zap.ByteString
-    Namespace = zap.Namespace
-    Stack     = zap.Stack
-    Object    = zap.Object
-    Array     = zap.Array
-    Reflect   = zap.Reflect
+	String     = zap.String
+	Int        = zap.Int
+	Int64      = zap.Int64
+	Float64    = zap.Float64
+	Bool       = zap.Bool
+	Any        = zap.Any
+	Err        = zap.Error
+	Duration   = zap.Duration
+	Time       = zap.Time
+	Stringer   = zap.Stringer
+	Int32      = zap.Int32
+	Uint       = zap.Uint
+	Uint64     = zap.Uint64
+	Binary     = zap.Binary
+	ByteString = zap.ByteString
+	Namespace  = zap.Namespace
+	Stack      = zap.Stack
+	Object     = zap.Object
+	Array      = zap.Array
+	Reflect    = zap.Reflect
 )
 
 // Logger wraps a zap.Logger with additional functionality.
@@ -42,14 +41,88 @@ type Logger struct {
 	environment string
 }
 
-// New creates a new Logger instance with the given options.
+// NewDevelopment creates a Logger for local/development environments.
+// Uses zap.NewDevelopmentConfig() with colored, human-readable output.
+// No sampling is applied - all logs are printed.
 //
 // Example:
 //
-//	logger, err := wlogger.New(
-//	    wlogger.WithEnvironment("prod"),
-//	    wlogger.WithInfoSampling(100, 10),
-//	    wlogger.WithWarnSampling(50, 5),
+//	logger, err := qlogger.NewDevelopment()
+//	if err != nil {
+//	    panic(err)
+//	}
+//	defer logger.Sync()
+//	logger.Info(ctx, "message", zap.String("key", "value"))
+func NewDevelopment() (*Logger, error) {
+	config := zap.NewDevelopmentConfig()
+	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+
+	zapLogger, err := config.Build(zap.AddCaller(), zap.AddCallerSkip(1))
+	if err != nil {
+		return nil, err
+	}
+
+	return &Logger{
+		log:         zapLogger,
+		environment: "dev",
+	}, nil
+}
+
+// NewProduction creates a Logger for production environments with sampling.
+// Uses sampler.New() with JSON output and configurable sampling rules.
+//
+// Example:
+//
+//	logger, err := qlogger.NewProduction(
+//	    sampler.WithInfoSampling(100, 10),
+//	    sampler.WithWarnSampling(50, 5),
+//	)
+//	if err != nil {
+//	    panic(err)
+//	}
+//	defer logger.Sync()
+//	logger.Info(ctx, "message", zap.String("key", "value"))
+func NewProduction(samplerOpts ...sampler.Option) (*Logger, error) {
+	// Add default caller options
+	samplerOpts = append(samplerOpts,
+		sampler.WithCaller(true),
+		sampler.WithCallerSkip(1),
+	)
+
+	zapLogger, err := sampler.New(samplerOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Logger{
+		log:         zapLogger,
+		environment: "prod",
+	}, nil
+}
+
+// NewNop creates a no-op Logger that discards all logs.
+// Useful for testing or when you want to disable logging entirely.
+//
+// Example:
+//
+//	logger := qlogger.NewNop()
+//	logger.Info(ctx, "this will be discarded")
+func NewNop() *Logger {
+	return &Logger{
+		log:         zap.NewNop(),
+		environment: "nop",
+	}
+}
+
+// New creates a new Logger instance with the given options.
+// For explicit control, prefer using NewDevelopment(), NewProduction(), or NewNop().
+//
+// Example:
+//
+//	logger, err := qlogger.New(
+//	    qlogger.WithEnvironment("prod"),
+//	    qlogger.WithInfoSampling(100, 10),
+//	    qlogger.WithWarnSampling(50, 5),
 //	)
 //	if err != nil {
 //	    panic(err)
@@ -59,49 +132,25 @@ type Logger struct {
 func New(opts ...LoggerOption) (*Logger, error) {
 	cfg := newLoggerConfig()
 
-	// Apply environment from ENV var if not explicitly set
-	if env := os.Getenv("ENV"); env != "" {
-		cfg.environment = env
-		cfg.development = env == "local" || env == "dev" || env == "development"
-	}
-
 	// Apply user options
 	for _, opt := range opts {
 		opt(cfg)
 	}
 
-	var zapLogger *zap.Logger
-	var err error
+	// For local/dev environments, use NewDevelopment (no sampling)
+	if cfg.development {
+		return NewDevelopment()
+	}
 
-	// If we have sampling options, use the sampler builder
-	if len(cfg.samplerOptions) > 0 && cfg.environment == "prod" {
-		// Add caller configuration to sampler options
-		cfg.samplerOptions = append(cfg.samplerOptions,
-			sampler.WithCaller(cfg.addCaller),
-			sampler.WithCallerSkip(cfg.callerSkip),
-		)
+	// For production with sampling options, use NewProduction
+	if len(cfg.samplerOptions) > 0 {
+		return NewProduction(cfg.samplerOptions...)
+	}
 
-		zapLogger, err = sampler.New(cfg.samplerOptions...)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// Use standard zap configuration
-		if cfg.development {
-			config := zap.NewDevelopmentConfig()
-			config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-			zapLogger, err = config.Build()
-		} else {
-			zapLogger, err = zap.NewProduction()
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		// Add caller if enabled
-		if cfg.addCaller {
-			zapLogger = zapLogger.WithOptions(zap.AddCaller(), zap.AddCallerSkip(cfg.callerSkip))
-		}
+	// Default production without sampling
+	zapLogger, err := zap.NewProduction(zap.AddCaller(), zap.AddCallerSkip(cfg.callerSkip))
+	if err != nil {
+		return nil, err
 	}
 
 	return &Logger{
@@ -236,8 +285,8 @@ func (l *Logger) WithContext(ctx context.Context) *Logger {
 // addDefaultFields adds standard fields like traceId to log entries.
 func addDefaultFields(ctx context.Context, fields ...zap.Field) []zap.Field {
 	traceID := GetTraceIDFromCtx(ctx)
-	if traceID != "" {
-		fields = append(fields, zap.String("traceId", traceID))
-	}
+
+	fields = append(fields, zap.String("trace_id", traceID))
+
 	return fields
 }
