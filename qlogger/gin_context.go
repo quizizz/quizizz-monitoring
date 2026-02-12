@@ -77,13 +77,13 @@ func GetTraceIDFromGinCtx(c *gin.Context) string {
 
 	// Try OpenTelemetry span context first (already in correct format)
 	if traceID == "" {
-	span := trace.SpanFromContext(ctx)
-		if span != nil {
-			spanContext := span.SpanContext()
-			if spanContext.IsValid() {
-				return spanContext.TraceID().String()
+		span := trace.SpanFromContext(ctx)
+			if span != nil {
+				spanContext := span.SpanContext()
+				if spanContext.IsValid() {
+					return spanContext.TraceID().String()
+				}
 			}
-		}
     }
 
 	return NormalizeTraceID(traceID)
@@ -92,7 +92,9 @@ func GetTraceIDFromGinCtx(c *gin.Context) string {
 // addGinDefaultFields adds standard fields like traceId to log entries.
 func addGinDefaultFields(c *gin.Context, fields ...Field) []Field {
 	traceID := GetTraceIDFromGinCtx(c)
+	if traceID != "" {
 		fields = append(fields, String("trace_id", traceID))
+	}
 	return fields
 }
 

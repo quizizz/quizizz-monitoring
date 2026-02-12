@@ -52,75 +52,29 @@ func GetTraceIDFromCtx(ctx context.Context) string {
 
 	
 
-	// Try AWS X-Ray (trace_id) from context (typed key)
-	if traceID == "" {
-		if val, ok := ctx.Value(TraceIDKey).(string); ok && val != "" {
-			traceID = val
-		}
+	// 1. Try custom trace ID from context (typed key)
+	if val, ok := ctx.Value(TraceIDKey).(string); ok && val != "" {
+		traceID = val
 	}
 
-	// Try AWS X-Ray trace ID from context ( for backward compatibility)
+	// 2. Try AWS X-Ray trace ID from context
 	if traceID == "" {
 		if val, ok := ctx.Value(AWSTraceIDKey).(string); ok && val != "" {
 			traceID = val
 		}
 	}
 
-	// Fallback: try to extract from HTTP request headers stored in context
+	// 3. Try to extract from HTTP request headers stored in context
 	if traceID == "" {
 		if req, ok := ctx.Value(HTTPRequestKey).(*http.Request); ok && req != nil {
-			// Try AWS X-Ray trace ID (X-Amzn-Trace-Id)
-			if val := req.Header.Get(HeaderXAmznTraceID); val != "" {
-				traceID = val
-			}
-			// Try AWS X-Ray trace ID (alternative format X-Amzn-TraceId)
-			if traceID == "" {
-				if val := req.Header.Get(HeaderXAmznTraceIDV2); val != "" {
-					traceID = val
-				}
-			}
-			// Try AWS Firehose trace ID (X-Amz-Firehose-TraceId)
-			if traceID == "" {
-				if val := req.Header.Get(HeaderXAmzFirehoseTrace); val != "" {
-					traceID = val
-				}
-			}
+			traceID = getTraceIDFromHeaders(req.Header)
 		}
 	}
 
-	// Try custom trace ID from context (typed key)
-	if traceID == "" {
-		if val, ok := ctx.Value(TraceIDKey).(string); ok && val != "" {
-			traceID = val
-		}
-	}
+	
 
-	// Fallback: try to extract X-Trace-ID from HTTP request headers
+	// 4. Try OpenTelemetry span context as last resort
 	if traceID == "" {
-		if req, ok := ctx.Value(HTTPRequestKey).(*http.Request); ok && req != nil {
-			if val := req.Header.Get(HeaderXTraceID); val != "" {
-				traceID = val
-			}
-		}
-	}
-
-	// Fallback: try to extract X-Request-ID from HTTP request headers
-	if traceID == "" {
-		if req, ok := ctx.Value(HTTPRequestKey).(*http.Request); ok && req != nil {
-			if val := req.Header.Get(HeaderXRequestID); val != "" {
-				traceID = val
-			}
-		}
-	}
-
-	// Fallback: try string key for backward compatibility
-	if traceID == "" {
-		if val, ok := ctx.Value("x-trace-id").(string); ok && val != "" {
-			traceID = val
-		}
-	}
-	// Try OpenTelemetry span context 
-	if traceID ==  "" {
 		span := trace.SpanFromContext(ctx)
 		if span != nil {
 			spanContext := span.SpanContext()
@@ -266,8 +220,8 @@ func WithAWSTraceID(ctx context.Context, awsTraceID string) context.Context {
 // Example:
 //
 //	func handler(w http.ResponseWriter, r *http.Request) {
-//	    ctx := wlogger.WithHTTPRequest(r.Context(), r)
-//	    wlogger.Info(ctx, "handling request")
+//	    ctx := qlogger.WithHTTPRequest(r.Context(), r)
+//	    logger.InfoWithTraceIdCtx(ctx, "handling request")
 //	}
 func WithHTTPRequest(ctx context.Context, req *http.Request) context.Context {
 	return context.WithValue(ctx, HTTPRequestKey, req)

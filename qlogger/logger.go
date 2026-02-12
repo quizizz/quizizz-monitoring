@@ -294,8 +294,9 @@ func (l *Logger) WithContext(ctx context.Context) *Logger {
 // addDefaultFields adds standard fields like traceId to log entries.
 func addDefaultFields(ctx context.Context, fields ...zap.Field) []zap.Field {
 	traceID := GetTraceIDFromCtx(ctx)
-
-	fields = append(fields, zap.String("trace_id", traceID))
+	if traceID != "" {
+		fields = append(fields, zap.String("trace_id", traceID))
+	}
 
 	return fields
 }

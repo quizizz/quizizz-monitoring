@@ -103,7 +103,7 @@ func WithCaller(enabled bool) LoggerOption {
 }
 
 // WithCallerSkip sets the number of stack frames to skip for caller info.
-// Default is 1 to skip the wlogger wrapper functions.
+// Default is 1 to skip the qlogger wrapper functions.
 func WithCallerSkip(skip int) LoggerOption {
 	return func(c *loggerConfig) {
 		c.callerSkip = skip

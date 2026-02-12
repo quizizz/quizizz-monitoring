@@ -42,11 +42,16 @@ func main() {
     defer logger.Sync()
 
     ctx := context.Background()
+    ctx = qlogger.WithTraceID(ctx, "abc-123-xyz")
     
-    
-    // Log with context - automatically includes trace_id
-    logger.Info(ctx, "Application started",
+    // Log with trace ID from context
+    logger.InfoWithTraceIdCtx(ctx, "Application started",
         qlogger.String("version", "1.0.0"),
+    )
+    
+    // Log without context
+    logger.Info("Simple log message",
+        qlogger.String("key", "value"),
     )
 }
 ```
@@ -58,6 +63,7 @@ package main
 
 import (
     "context"
+    "time"
     
     "github.com/quizizz/quizizz-monitoring/qlogger"
     "github.com/quizizz/quizizz-monitoring/qlogger/sampler"
@@ -75,8 +81,9 @@ func main() {
     defer logger.Sync()
 
     ctx := context.Background()
+    ctx = qlogger.WithTraceID(ctx, "request-trace-123")
     
-    logger.Info(ctx, "Request processed",
+    logger.InfoWithTraceIdCtx(ctx, "Request processed",
         qlogger.String("user_id", "12345"),
         qlogger.Duration("latency", time.Millisecond*150),
     )
@@ -152,7 +159,7 @@ ctx = qlogger.WithHTTPRequest(ctx, req)
 // From AWS X-Ray
 ctx = qlogger.WithAWSTraceID(ctx, "Root=1-5759e988-bd862e3fe1be46a994272793")
 
-logger.Info(ctx, "Request processed") // trace_id automatically included
+logger.InfoWithTraceIdCtx(ctx, "Request processed") // trace_id automatically included
 ```
 
 ### AWS X-Ray Support
@@ -172,12 +179,12 @@ AWS X-Ray trace IDs are automatically parsed from the `Root=1-x-y` format:
 import "github.com/quizizz/quizizz-monitoring/qlogger"
 
 func MyHandler(c *gin.Context) {
-    // Automatically extracts trace ID from gin.Context
-    logger.InfoGin(c, "Processing request",
+    // Automatically extracts trace ID from gin.Context headers
+    logger.InfoWithTraceId(c, "Processing request",
         qlogger.String("path", c.Request.URL.Path),
     )
     
-    logger.ErrorGin(c, "Something went wrong",
+    logger.ErrorWithTraceId(c, "Something went wrong",
         qlogger.Err(err),
     )
 }
@@ -192,7 +199,7 @@ func LoggingMiddleware(logger *qlogger.Logger) gin.HandlerFunc {
         
         c.Next()
         
-        logger.InfoGin(c, "http-response",
+        logger.InfoWithTraceId(c, "http-response",
             qlogger.String("method", c.Request.Method),
             qlogger.String("path", c.Request.URL.Path),
             qlogger.Int("status", c.Writer.Status()),
@@ -206,12 +213,13 @@ func LoggingMiddleware(logger *qlogger.Logger) gin.HandlerFunc {
 
 | Method | Description |
 |--------|-------------|
-| `logger.InfoGin(c, msg, fields...)` | Info log with gin.Context |
-| `logger.ErrorGin(c, msg, fields...)` | Error log with gin.Context |
-| `logger.WarnGin(c, msg, fields...)` | Warn log with gin.Context |
-| `logger.DebugGin(c, msg, fields...)` | Debug log with gin.Context |
-| `logger.FatalGin(c, msg, fields...)` | Fatal log with gin.Context |
-| `logger.PanicGin(c, msg, fields...)` | Panic log with gin.Context |
+| `logger.InfoWithTraceId(c, msg, fields...)` | Info log with gin.Context |
+| `logger.ErrorWithTraceId(c, msg, fields...)` | Error log with gin.Context |
+| `logger.WarnWithTraceId(c, msg, fields...)` | Warn log with gin.Context |
+| `logger.DebugWithTraceId(c, msg, fields...)` | Debug log with gin.Context |
+| `logger.FatalWithTraceId(c, msg, fields...)` | Fatal log with gin.Context |
+| `logger.PanicWithTraceId(c, msg, fields...)` | Panic log with gin.Context |
+| `logger.DPanicWithTraceId(c, msg, fields...)` | DPanic log with gin.Context |
 | `qlogger.GetTraceIDFromGinCtx(c)` | Extract trace ID from gin.Context |
 
 ## Field Constructors
@@ -254,26 +262,28 @@ logger.Info(ctx, "message", zap.String("key", "value"))
 
 ## Logging Methods
 
-### Context-Aware
+### With Trace ID from Context
 
 ```go
-logger.Info(ctx, msg, fields...)
-logger.Warn(ctx, msg, fields...)
-logger.Error(ctx, msg, fields...)
-logger.Debug(ctx, msg, fields...)  // Suppressed in prod
-logger.Fatal(ctx, msg, fields...)  // Calls os.Exit(1)
-logger.Panic(ctx, msg, fields...)  // Panics
+logger.InfoWithTraceIdCtx(ctx, msg, fields...)
+logger.WarnWithTraceIdCtx(ctx, msg, fields...)
+logger.ErrorWithTraceIdCtx(ctx, msg, fields...)
+logger.DebugWithTraceIdCtx(ctx, msg, fields...)  // Suppressed in prod
+logger.FatalWithTraceIdCtx(ctx, msg, fields...)  // Calls os.Exit(1)
+logger.PanicWithTraceIdCtx(ctx, msg, fields...)  // Panics
+logger.DPanicWithTraceIdCtx(ctx, msg, fields...) // Panics in dev, logs in prod
 ```
 
-### Without Context
+### Without Context (Standard Logging)
 
 ```go
-logger.InfoWithoutCtx(msg, fields...)
-logger.WarnWithoutCtx(msg, fields...)
-logger.ErrorWithoutCtx(msg, fields...)
-logger.DebugWithoutCtx(msg, fields...)
-logger.FatalWithoutCtx(msg, fields...)
-logger.PanicWithoutCtx(msg, fields...)
+logger.Info(msg, fields...)
+logger.Warn(msg, fields...)
+logger.Error(msg, fields...)
+logger.Debug(msg, fields...)   // Suppressed in prod
+logger.Fatal(msg, fields...)   // Calls os.Exit(1)
+logger.Panic(msg, fields...)   // Panics
+logger.DPanic(msg, fields...)  // Panics in dev, logs in prod
 ```
 
 ## Utility Methods
