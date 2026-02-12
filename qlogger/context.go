@@ -50,14 +50,7 @@ func GetTraceIDFromCtx(ctx context.Context) string {
 
 	var traceID string
 
-	// Try OpenTelemetry span context first (already in correct format)
-	span := trace.SpanFromContext(ctx)
-	if span != nil {
-		spanContext := span.SpanContext()
-		if spanContext.IsValid() {
-			return spanContext.TraceID().String()
-		}
-	}
+	
 
 	// Try AWS X-Ray (trace_id) from context (typed key)
 	if traceID == "" {
@@ -126,11 +119,23 @@ func GetTraceIDFromCtx(ctx context.Context) string {
 			traceID = val
 		}
 	}
+	// Try OpenTelemetry span context 
+	if traceID ==  "" {
+		span := trace.SpanFromContext(ctx)
+		if span != nil {
+			spanContext := span.SpanContext()
+			if spanContext.IsValid() {
+				return spanContext.TraceID().String()
+			}
+		}
+	}
+	
+	
 
 	// Parse and normalize the trace ID
 	// If it contains "Root=1-x-y" format, extract and return "xy"
 	// Otherwise, return as-is
-	return normalizeTraceID(traceID)
+	return NormalizeTraceID(traceID)
 }
 
 // getTraceIDFromHeaders extracts trace ID from HTTP headers.
@@ -182,27 +187,31 @@ func getTraceIDFromHeaders(headers http.Header) string {
 	}
 
 	// Parse and normalize the trace ID
-	return normalizeTraceID(traceID)
+	return NormalizeTraceID(traceID)
 }
 
-// parseAWSTraceID parses AWS X-Ray trace ID format.
-// Input format: "Root=1-x-y" or "Root=1-x-y;Parent=...;Sampled=..."
-// Output: "xy" (concatenation of x and y without dashes)
-//
+
+
 // Example:
 //
 //	Input:  "Root=1-5759e988-bd862e3fe1be46a994272793"
 //	Output: "5759e988bd862e3fe1be46a994272793"
+//
+//	Input:  "Self=1-698c225b-59083319108f1ccd0dc8599b;Root=1-f448e00d-bac3c863c2aea11848aeda61;Parent=834acb99c8c80028;Sampled=1"
+//	Output: "f448e00dbac3c863c2aea11848aeda61"
 func parseAWSTraceID(awsTraceID string) string {
-	// Handle full header format with multiple fields (Root=...;Parent=...;Sampled=...)
-	// Extract just the Root field
-	rootValue := awsTraceID
-	if idx := strings.Index(awsTraceID, ";"); idx != -1 {
-		rootValue = awsTraceID[:idx]
+	rootIndex := strings.Index(awsTraceID, "Root=")
+	if rootIndex == -1 {
+		return awsTraceID
 	}
 
-	// Remove "Root=" prefix if present
-	rootValue = strings.TrimPrefix(rootValue, "Root=")
+	// Extract everything after "Root="
+	rootValue := awsTraceID[rootIndex+5:] // Skip "Root=" (5 chars)
+
+	// Find the end of the Root field (marked by semicolon or end of string)
+	if idx := strings.Index(rootValue, ";"); idx != -1 {
+		rootValue = rootValue[:idx]
+	}
 
 	// Expected format: "1-x-y" where 1 is version, x is timestamp, y is unique id
 	parts := strings.Split(rootValue, "-")
@@ -217,7 +226,7 @@ func parseAWSTraceID(awsTraceID string) string {
 	return parts[1] + parts[2]
 }
 
-// normalizeTraceID normalizes a trace ID to a consistent format.
+// NormalizeTraceID normalizes a trace ID to a consistent format.
 // If the trace ID contains "Root=1-x-y" format (AWS X-Ray), it extracts and returns "xy".
 // Otherwise, it returns the trace ID as-is.
 //
@@ -229,7 +238,7 @@ func parseAWSTraceID(awsTraceID string) string {
 //
 //	Input:  ""
 //	Output: ""
-func normalizeTraceID(traceID string) string {
+func NormalizeTraceID(traceID string) string {
 	if traceID == "" {
 		return ""
 	}

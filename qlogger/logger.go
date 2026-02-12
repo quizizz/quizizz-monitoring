@@ -188,26 +188,26 @@ func (l *Logger) Sync() error {
 // --- Context-aware logging methods ---
 
 // Info logs a message at Info level with context.
-func (l *Logger) Info(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *Logger) InfoWithTraceIdCtx(ctx context.Context, msg string, fields ...zap.Field) {
 	fields = addDefaultFields(ctx, fields...)
 	l.log.Info(msg, fields...)
 }
 
 // Error logs a message at Error level with context.
-func (l *Logger) Error(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *Logger) ErrorWithTraceIdCtx(ctx context.Context, msg string, fields ...zap.Field) {
 	fields = addDefaultFields(ctx, fields...)
 	l.log.Error(msg, fields...)
 }
 
 // Warn logs a message at Warn level with context.
-func (l *Logger) Warn(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *Logger) WarnWithTraceIdCtx(ctx context.Context, msg string, fields ...zap.Field) {
 	fields = addDefaultFields(ctx, fields...)
 	l.log.Warn(msg, fields...)
 }
 
 // Debug logs a message at Debug level with context.
 // In production, debug logs are suppressed unless explicitly enabled.
-func (l *Logger) Debug(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *Logger) DebugWithTraceIdCtx(ctx context.Context, msg string, fields ...zap.Field) {
 	if l.environment == "prod" || l.environment == "production" {
 		return
 	}
@@ -216,51 +216,60 @@ func (l *Logger) Debug(ctx context.Context, msg string, fields ...zap.Field) {
 }
 
 // Fatal logs a message at Fatal level with context, then calls os.Exit(1).
-func (l *Logger) Fatal(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *Logger) FatalWithTraceIdCtx(ctx context.Context, msg string, fields ...zap.Field) {
 	fields = addDefaultFields(ctx, fields...)
 	l.log.Fatal(msg, fields...)
 }
 
 // Panic logs a message at Panic level with context, then panics.
-func (l *Logger) Panic(ctx context.Context, msg string, fields ...zap.Field) {
+func (l *Logger) PanicWithTraceIdCtx(ctx context.Context, msg string, fields ...zap.Field) {
 	fields = addDefaultFields(ctx, fields...)
 	l.log.Panic(msg, fields...)
 }
 
+func (l *Logger) DPanicWithTraceIdCtx(ctx context.Context, msg string, fields ...zap.Field) {
+	fields = addDefaultFields(ctx, fields...)
+	l.log.DPanic(msg, fields...)
+}
+
 // --- Context-free logging methods ---
 
-// InfoWithoutCtx logs a message at Info level without context.
-func (l *Logger) InfoWithoutCtx(msg string, fields ...zap.Field) {
+// Info logs a message at Info level without context.
+func (l *Logger) Info(msg string, fields ...zap.Field) {
 	l.log.Info(msg, fields...)
 }
 
-// ErrorWithoutCtx logs a message at Error level without context.
-func (l *Logger) ErrorWithoutCtx(msg string, fields ...zap.Field) {
+// Error logs a message at Error level without context.
+func (l *Logger) Error(msg string, fields ...zap.Field) {
 	l.log.Error(msg, fields...)
 }
 
-// WarnWithoutCtx logs a message at Warn level without context.
-func (l *Logger) WarnWithoutCtx(msg string, fields ...zap.Field) {
+// Warn logs a message at Warn level without context.
+func (l *Logger) Warn(msg string, fields ...zap.Field) {
 	l.log.Warn(msg, fields...)
 }
 
-// DebugWithoutCtx logs a message at Debug level without context.
+// Debug logs a message at Debug level without context.
 // In production, debug logs are suppressed.
-func (l *Logger) DebugWithoutCtx(msg string, fields ...zap.Field) {
+func (l *Logger) Debug(msg string, fields ...zap.Field) {
 	if l.environment == "prod" || l.environment == "production" {
 		return
 	}
 	l.log.Debug(msg, fields...)
 }
 
-// FatalWithoutCtx logs a message at Fatal level without context, then exits.
-func (l *Logger) FatalWithoutCtx(msg string, fields ...zap.Field) {
+// Fatal logs a message at Fatal level without context, then exits.
+func (l *Logger) Fatal(msg string, fields ...zap.Field) {
 	l.log.Fatal(msg, fields...)
 }
 
-// PanicWithoutCtx logs a message at Panic level without context, then panics.
-func (l *Logger) PanicWithoutCtx(msg string, fields ...zap.Field) {
+// Panic logs a message at Panic level without context, then panics.
+func (l *Logger) Panic(msg string, fields ...zap.Field) {
 	l.log.Panic(msg, fields...)
+}
+
+func (l *Logger) DPanic(msg string, fields ...zap.Field) {
+	l.log.DPanic(msg, fields...)
 }
 
 // --- Utility methods ---
