@@ -83,13 +83,19 @@ func NewDevelopment() (*Logger, error) {
 //	defer logger.Sync()
 //	logger.Info(ctx, "message", zap.String("key", "value"))
 func NewProduction(samplerOpts ...sampler.Option) (*Logger, error) {
+	var zapLogger *zap.Logger
+	var err error
+	if len(samplerOpts) == 0 {
+		zapLogger, err = zap.NewProduction(zap.AddCaller(), zap.AddCallerSkip(1))
+	} else {
 	// Add default caller options
-	samplerOpts = append(samplerOpts,
-		sampler.WithCaller(true),
-		sampler.WithCallerSkip(1),
-	)
+		samplerOpts = append(samplerOpts,
+			sampler.WithCaller(true),
+			sampler.WithCallerSkip(1),
+		)
 
-	zapLogger, err := sampler.New(samplerOpts...)
+		zapLogger, err = sampler.New(samplerOpts...)
+	}
 	if err != nil {
 		return nil, err
 	}
