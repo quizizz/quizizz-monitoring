@@ -88,11 +88,11 @@ func NewProduction(samplerOpts ...sampler.Option) (*Logger, error) {
 	if len(samplerOpts) == 0 {
 		zapLogger, err = zap.NewProduction(zap.AddCaller(), zap.AddCallerSkip(1))
 	} else {
-	// Add default caller options
-		samplerOpts = append(samplerOpts,
+		defaultOpts := []sampler.Option{
 			sampler.WithCaller(true),
 			sampler.WithCallerSkip(1),
-		)
+		}
+		samplerOpts = append(defaultOpts, samplerOpts...)
 
 		zapLogger, err = sampler.New(samplerOpts...)
 	}
