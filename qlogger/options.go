@@ -17,15 +17,7 @@ type loggerConfig struct {
 	development    bool
 }
 
-// newLoggerConfig creates a new config with defaults.
-func newLoggerConfig() *loggerConfig {
-	return &loggerConfig{
-		environment: "prod",
-		addCaller:   true,
-		callerSkip:  1, // Skip the wrapper functions
-		development: false,
-	}
-}
+
 
 // --- Environment Options ---
 
