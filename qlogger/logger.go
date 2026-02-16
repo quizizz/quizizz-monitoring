@@ -83,13 +83,19 @@ func NewDevelopment() (*Logger, error) {
 //	defer logger.Sync()
 //	logger.Info(ctx, "message", zap.String("key", "value"))
 func NewProduction(samplerOpts ...sampler.Option) (*Logger, error) {
-	// Add default caller options
-	samplerOpts = append(samplerOpts,
-		sampler.WithCaller(true),
-		sampler.WithCallerSkip(1),
-	)
+	var zapLogger *zap.Logger
+	var err error
+	if len(samplerOpts) == 0 {
+		zapLogger, err = zap.NewProduction(zap.AddCaller(), zap.AddCallerSkip(1))
+	} else {
+		defaultOpts := []sampler.Option{
+			sampler.WithCaller(true),
+			sampler.WithCallerSkip(1),
+		}
+		samplerOpts = append(defaultOpts, samplerOpts...)
 
-	zapLogger, err := sampler.New(samplerOpts...)
+		zapLogger, err = sampler.New(samplerOpts...)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -114,70 +120,14 @@ func NewNop() *Logger {
 	}
 }
 
-// New creates a new Logger instance with the given options.
-// For explicit control, prefer using NewDevelopment(), NewProduction(), or NewNop().
-//
-// Example:
-//
-//	logger, err := qlogger.New(
-//	    qlogger.WithEnvironment("prod"),
-//	    qlogger.WithInfoSampling(100, 10),
-//	    qlogger.WithWarnSampling(50, 5),
-//	)
-//	if err != nil {
-//	    panic(err)
-//	}
-//	defer logger.Sync()
-//	logger.Info(ctx, "message", zap.String("key", "value"))
-func New(opts ...LoggerOption) (*Logger, error) {
-	cfg := newLoggerConfig()
 
-	// Apply user options
-	for _, opt := range opts {
-		opt(cfg)
-	}
-
-	// For local/dev environments, use NewDevelopment (no sampling)
-	if cfg.development {
-		return NewDevelopment()
-	}
-
-	// For production with sampling options, use NewProduction
-	if len(cfg.samplerOptions) > 0 {
-		return NewProduction(cfg.samplerOptions...)
-	}
-
-	// Default production without sampling
-	zapLogger, err := zap.NewProduction(zap.AddCaller(), zap.AddCallerSkip(cfg.callerSkip))
-	if err != nil {
-		return nil, err
-	}
-
-	return &Logger{
-		log:         zapLogger,
-		environment: cfg.environment,
-	}, nil
-}
-
-// MustNew creates a new Logger instance, panicking on error.
-// Use this only when you're certain the configuration is valid.
-func MustNew(opts ...LoggerOption) *Logger {
-	logger, err := New(opts...)
-	if err != nil {
-		panic(err)
-	}
-	return logger
-}
 
 // Zap returns the underlying zap.Logger for advanced use cases.
 func (l *Logger) Zap() *zap.Logger {
 	return l.log
 }
 
-// Environment returns the configured environment.
-func (l *Logger) Environment() string {
-	return l.environment
-}
+
 
 // Sync flushes any buffered log entries.
 // Applications should call this before exiting.

@@ -22,7 +22,7 @@ func NewConfig() *Config {
 		rules:      make(map[zapcore.Level]*Rule),
 		output:     zapcore.AddSync(os.Stdout),
 		addCaller:  true,
-		callerSkip: 0,
+		callerSkip: 1,
 	}
 }
 
